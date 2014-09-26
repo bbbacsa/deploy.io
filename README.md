@@ -3,7 +3,7 @@ deploy.io
 
 Scale, Secure, Tune &amp; Monitor your web app effortlessly. Just Deploy.
 
-Usage: deploy.js --alias ALIAS --key KEY --secret SECRET [OPTIONS]"
+Usage: deploy.js --alias ALIAS --key KEY --secret SECRET [OPTIONS]
 
 Required:
  - alias:  Your consumer alias.
