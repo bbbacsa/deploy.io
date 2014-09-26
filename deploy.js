@@ -22,7 +22,7 @@ var opts   = subarg(process.argv.slice(2));
 
 if (opts.help || opts.h) usage();
  
-[ 'alias', 'key', 'secret', 'type', 'url' ].forEach(function(opt) {
+[ 'alias', 'key', 'secret', 'url' ].forEach(function(opt) {
     // support ALIAS, KEY, SECRET from environment
     opts[opt] = opts[opt] || process.env[opt.toUpperCase()];
  
@@ -41,7 +41,7 @@ var maxcdn = new MaxCDN(opts.alias, opts.key, opts.secret);
 
 opts.name = opts.name || makeid();
 
-createZone(opts.type, opts.name, opts.url);
+createZone('pull', opts.name, opts.url);
 
 function createZone(type, name, url) {
     process.stdout.write('creating ' + type + ' zone ' + name + '... ');
@@ -86,9 +86,9 @@ function usage(status, error) {
     console.log(" ");
     console.log(" Examples:");
     console.log(" ");
-    console.log(" $ ./deploy.js --alias ALIAS --key KEY --SECRET --type pull --name test123 --url http://www.example.com");
+    console.log(" $ ./deploy.js --alias ALIAS --key KEY --SECRET --name test123 --url http://www.example.com");
     console.log(" ");
-    console.log(" $ ./deploy.js --alias ALIAS --key KEY --SECRET --type pull --url http://www.example.com");
+    console.log(" $ ./deploy.js --alias ALIAS --key KEY --SECRET --url http://www.example.com");
     console.log(" ");
     process.exit(status);
 }

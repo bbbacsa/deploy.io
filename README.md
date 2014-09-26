@@ -16,6 +16,6 @@ Note:
 
 Examples:
 
-$ ./deploy.js --alias ALIAS --key KEY --SECRET --type pull --name test123 --url http://www.example.com
+$ ./deploy.js --alias ALIAS --key KEY --SECRET --name test123 --url http://www.example.com
 
-$ ./deploy.js --alias ALIAS --key KEY --SECRET --type pull --url http://www.example.com
+$ ./deploy.js --alias ALIAS --key KEY --SECRET --url http://www.example.com
