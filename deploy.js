@@ -22,7 +22,7 @@ var opts   = subarg(process.argv.slice(2));
 
 if (opts.help || opts.h) usage();
  
-[ 'alias', 'key', 'secret', 'type', 'name', 'url' ].forEach(function(opt) {
+[ 'alias', 'key', 'secret', 'type', 'url' ].forEach(function(opt) {
     // support ALIAS, KEY, SECRET from environment
     opts[opt] = opts[opt] || process.env[opt.toUpperCase()];
  
@@ -39,6 +39,8 @@ if (opts.help || opts.h) usage();
 // init MaxCDN
 var maxcdn = new MaxCDN(opts.alias, opts.key, opts.secret);
 
+opts.name = opts.name || makeid();
+
 createZone(opts.type, opts.name, opts.url);
 
 function createZone(type, name, url) {
@@ -51,7 +53,18 @@ function createZone(type, name, url) {
         }
     });
 }
- 
+
+function makeid()
+{
+    var text = "";
+    var possible = "abcdefghijklmnopqrstuvwxyz";
+
+    for( var i=0; i < 5; i++ )
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+    return text;
+}
+
 function usage(status, error) {
     status = status || 0; // default to zero exit status
  
