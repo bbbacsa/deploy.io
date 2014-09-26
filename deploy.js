@@ -2,7 +2,7 @@
 /***
  * Setup:
  *
- * npm install maxcdn subarg async
+ * npm install
  *
  ***/
 var MaxCDN, subarg, async;
@@ -13,7 +13,7 @@ try {
 } catch (e) {
     console.error("Setup:");
     console.error(" ");
-    console.error("$ npm install maxcdn subarg async ");
+    console.error("$ npm install");
     console.error(" ");
     console.trace(e);
     process.exit(1);
@@ -59,7 +59,7 @@ function usage(status, error) {
         console.error("ERROR:", error);
         console.error(" ");
     }
- 
+
     console.log("Usage: deploy.js --alias ALIAS --key KEY --secret SECRET [OPTIONS]");
     console.log(" ");
     console.log(" Required:");
