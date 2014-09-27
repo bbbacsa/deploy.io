@@ -86,9 +86,9 @@ function usage(status, error) {
     console.log(" ");
     console.log(" Examples:");
     console.log(" ");
-    console.log(" $ ./deploy.js --alias ALIAS --key KEY --SECRET --name test123 --url http://www.example.com");
+    console.log(" $ ./deploy.js --alias ALIAS --key KEY --secret SECRET --name test123 --url http://www.example.com");
     console.log(" ");
-    console.log(" $ ./deploy.js --alias ALIAS --key KEY --SECRET --url http://www.example.com");
+    console.log(" $ ./deploy.js --alias ALIAS --key KEY --secret SECRET --url http://www.example.com");
     console.log(" ");
     process.exit(status);
 }
