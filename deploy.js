@@ -5,11 +5,10 @@
  * npm install
  *
  ***/
-var MaxCDN, subarg, async;
+var MaxCDN, subarg;
 try {
     MaxCDN = require('maxcdn');
     subarg = require('subarg');
-    async  = require('async');
 } catch (e) {
     console.error("Setup:");
     console.error(" ");

@@ -7,7 +7,6 @@
   },
   "dependencies": {
     "maxcdn": "*",
-    "subarg": "*",
-    "async": "*"
+    "subarg": "*"
   }
 }
