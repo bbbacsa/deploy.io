@@ -1,21 +1,16 @@
 deploy.io
 =========
 
-Scale, Secure, Tune &amp; Monitor your web app effortlessly. Just Deploy.
+Your app effortlessly in low latency containers.
+8ms in the US, 16ms in EU and 20ms in APAC
+Just Deploy.
 
-Usage: deploy.js --alias ALIAS --key KEY --secret SECRET [OPTIONS]
-
-Required:
- - alias:  Your consumer alias.
- - key:    Your oauth consumer key.
- - secret: Your oauth consumer secret token.
-
-Note:
-  alias, key and secret can also be read from your environment
-  via exporting ALIAS, KEY, and/or SECRET with your credentials.
+Usage: ./deploy [COMMAND]
 
 Examples:
 
-$ ./deploy.js --alias ALIAS --key KEY --secret SECRET --name test123 --url http://www.example.com
+$ ./deploy hosts
 
-$ ./deploy.js --alias ALIAS --key KEY --secret SECRET --url http://www.example.com
+$ ./deploy hosts create [-M SIZE] [NAME]
+
+$ ./deploy hosts rm id
