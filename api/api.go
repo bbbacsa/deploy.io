@@ -16,6 +16,7 @@ type Host struct {
 	URL        string
 	Size       int64
 	IPAddress  string `json:"ipv4_address"`
+	Port       int64
 	ClientKey  string `json:"client_key"`
 	ClientCert string `json:"client_cert"`
 }

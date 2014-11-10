@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"github.com/bbbacsa/deploy.io/api"
 	"github.com/bbbacsa/deploy.io/authenticator"
-	"github.com/bbbacsa/deploy.io/proxy"
-	"github.com/bbbacsa/deploy.io/tlsconfig"
+//	"github.com/bbbacsa/deploy.io/proxy"
+//	"github.com/bbbacsa/deploy.io/tlsconfig"
 	"github.com/bbbacsa/deploy.io/utils"
-	"github.com/bbbacsa/deploy.io/vendor/crypto/tls"
+//	"github.com/bbbacsa/deploy.io/vendor/crypto/tls"
 	"io/ioutil"
-	"net"
+//	"net"
 	"os"
 	"os/exec"
-	"os/signal"
+//	"os/signal"
 	"path"
 	"strings"
-	"syscall"
+//	"syscall"
 	"text/tabwriter"
 )
 
@@ -70,9 +70,7 @@ func init() {
 	CreateHost.Run = RunCreateHost
 	RemoveHost.Run = RunRemoveHost
 	Docker.Run = RunDocker
-	Proxy.Run = RunProxy
 	IP.Run = RunIP
-	Run.Run = RunRun
 }
 
 var Hosts = &Command{
@@ -302,34 +300,14 @@ func RunRemoveHost(cmd *Command, args []string) error {
 }
 
 func RunDocker(cmd *Command, args []string) error {
-	return WithDockerProxy("", *flDockerHost, func(listenURL string) error {
+	return WithDockerProxy("", *flDockerHost, func(listenURL string, ca string, clientCert string, clientKey string) error {
+	  args = append([]string{"--tlscacert='" + ca + "'"}, args...)
+	  args = append([]string{"--tlscert='" + clientCert + "'"}, args...)
+	  args = append([]string{"--tlskey='" + clientKey + "'"}, args...)
 		err := CallDocker(args, listenURL)
 		if err != nil {
 			return fmt.Errorf("Docker exited with error")
 		}
-		return nil
-	})
-}
-
-func RunProxy(cmd *Command, args []string) error {
-	specifiedURL := ""
-
-	if len(args) == 1 {
-		specifiedURL = args[0]
-	} else if len(args) > 1 {
-		return cmd.UsageError("`deploy proxy` expects at most 1 argument, but got: %s", strings.Join(args, " "))
-	}
-
-	return WithDockerProxy(specifiedURL, *flProxyHost, func(listenURL string) error {
-		fmt.Fprintf(os.Stderr, `Started proxy. Use it by setting your Docker host:
-export DOCKER_HOST=%s
-`, listenURL)
-
-		c := make(chan os.Signal)
-		signal.Notify(c, syscall.SIGINT, syscall.SIGKILL)
-		<-c
-
-		fmt.Fprintln(os.Stderr, "\nStopping proxy")
 		return nil
 	})
 }
@@ -350,93 +328,45 @@ func RunIP(cmd *Command, args []string) error {
 	return nil
 }
 
-func RunRun(cmd *Command, args []string) error {
-	if len(args) < 1 {
-		return cmd.UsageError("`deploy run` expects at least 1 argument")
-	}
-	return WithDockerProxy("", *flRunHost, func(listenURL string) error {
-		os.Setenv("DOCKER_HOST", listenURL)
-
-		cmd := exec.Command(args[0], args[1:]...)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		return cmd.Run()
-	})
-}
-
-func WithDockerProxy(listenURL, hostName string, callback func(string) error) error {
+func WithDockerProxy(listenURL, hostName string, callback func(string, string, string, string) error) error {
 	if hostName == "" {
 		hostName = "default"
 	}
 
-	if listenURL == "" {
-		dirname, err := ioutil.TempDir("/tmp", "deploy-")
-		if err != nil {
-			return fmt.Errorf("Error creating temporary directory: %s\n", err)
-		}
-		defer os.RemoveAll(dirname)
-		listenURL = fmt.Sprintf("unix://%s", path.Join(dirname, "deploy.sock"))
-	}
-
-	listenType, listenAddr, err := ListenArgs(listenURL)
-	if err != nil {
-		return err
-	}
-
-	p, err := MakeProxy(listenType, listenAddr, hostName)
-	if err != nil {
-		return fmt.Errorf("Error starting proxy: %v\n", err)
-	}
-
-	go p.Start()
-	defer p.Stop()
-
-	if err := <-p.ErrorChannel; err != nil {
-		return fmt.Errorf("Error starting proxy: %v\n", err)
-	}
-
-	if err := callback(listenURL); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-var validListenTypes = []string{"tcp", "tcp4", "tcp6", "unix", "unixpacket"}
-
-func ListenArgs(url string) (string, string, error) {
-	parts := strings.SplitN(url, "://", 2)
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("Invalid URL: %q", url)
-	}
-	for _, validType := range validListenTypes {
-		if parts[0] == validType {
-			return parts[0], parts[1], nil
-		}
-	}
-	return "", "", fmt.Errorf("Invalid URL type: %q", parts[0])
-}
-
-func MakeProxy(listenType, listenAddr string, hostName string) (*proxy.Proxy, error) {
 	host, err := GetHost(hostName)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	destination := host.IPAddress + ":4243"
-
-	certData := []byte(host.ClientCert)
-	keyData := []byte(host.ClientKey)
-	config, err := tlsconfig.GetTLSConfig(certData, keyData)
-	if err != nil {
-		return nil, err
+	listenURL = "tcp://" + host.IPAddress + ":" + fmt.Sprintf("%d", host.Port)
+	
+	ca, caerr := ioutil.TempFile(os.TempDir(), "ca")
+	cert, certerr := ioutil.TempFile(os.TempDir(), "cert")
+	key, keyerr := ioutil.TempFile(os.TempDir(), "key")
+	
+	if caerr != nil {
+	  return caerr
+	}
+	if certerr != nil {
+	  return certerr
+	}
+	if keyerr != nil {
+  	return keyerr
 	}
 
-	return proxy.New(
-		func() (net.Listener, error) { return net.Listen(listenType, listenAddr) },
-		func() (net.Conn, error) { return tls.Dial("tcp", destination, config) },
-	), nil
+	caerr = ioutil.WriteFile(ca.Name(), []byte(deployCerts), 0x644)
+	certerr = ioutil.WriteFile(cert.Name(), []byte(host.ClientCert), 0x644)
+	keyerr = ioutil.WriteFile(key.Name(), []byte(host.ClientKey), 0x644)
+	
+	if err := callback(listenURL, ca.Name(), cert.Name(), key.Name()); err != nil {
+	  os.Remove(ca.Name())
+	  os.Remove(cert.Name())
+	  os.Remove(key.Name())
+		return err
+	}
+	
+
+	return nil
 }
 
 func CallDocker(args []string, dockerHost string) error {
@@ -446,6 +376,7 @@ func CallDocker(args []string, dockerHost string) error {
 	}
 
 	os.Setenv("DOCKER_HOST", dockerHost)
+	os.Setenv("DOCKER_TLS_VERIFY", "1")
 
 	cmd := exec.Command(dockerPath, args...)
 	cmd.Stdin = os.Stdin
@@ -518,3 +449,29 @@ func GetHost(hostName string) (*api.Host, error) {
 
 	return host, nil
 }
+
+var deployCerts string = `-----BEGIN CERTIFICATE-----
+MIIEKTCCAxGgAwIBAgIJAP81C5xoXHunMA0GCSqGSIb3DQEBCwUAMIGqMQswCQYD
+VQQGEwJQSDEPMA0GA1UECAwGTGFndW5hMRAwDgYDVQQHDAdDYWxhbWJhMS4wLAYD
+VQQKDCVCcnljaGVUZWNoIEludGVybmV0IFNvbHV0aW9ucyBDb21wYW55MQwwCgYD
+VQQLDANEZXYxGDAWBgNVBAMMDzEwNC4xMzEuMTU4LjEyNDEgMB4GCSqGSIb3DQEJ
+ARYRYmJiYWNzYUBnbWFpbC5jb20wHhcNMTQxMTEwMDUyMzU5WhcNMTUxMTEwMDUy
+MzU5WjCBqjELMAkGA1UEBhMCUEgxDzANBgNVBAgMBkxhZ3VuYTEQMA4GA1UEBwwH
+Q2FsYW1iYTEuMCwGA1UECgwlQnJ5Y2hlVGVjaCBJbnRlcm5ldCBTb2x1dGlvbnMg
+Q29tcGFueTEMMAoGA1UECwwDRGV2MRgwFgYDVQQDDA8xMDQuMTMxLjE1OC4xMjQx
+IDAeBgkqhkiG9w0BCQEWEWJiYmFjc2FAZ21haWwuY29tMIIBIjANBgkqhkiG9w0B
+AQEFAAOCAQ8AMIIBCgKCAQEAzWBb0yQS5ca0dQWhsrPdFcsfUGazhJ8EXM+2Np5s
+bj7wiT06TSunB+ME1Aj61KKxb9gI1QSW8LJy9Xp/1R1r7SWJ5VAAb8oSXP92w0Dk
+ph8MXPl1x8K3B22hJk0jiIADdS09AG30cp7osW6uqz7ARgsQh4khh2DohaB0zM1t
+9uLrDgUdP9BAVlFVRSYpfKMBPZ5PfmKmYod9GYOA9/Nxs44N/PhmvFMI42cVoL88
+YFZ3x/U7Iu495Hri9fJ1roHAh7Z7nGL3sD/iGd3bGXOeDztXWiqp59qSFUyvOuyC
+K/paZnz5izBlaz6Zir+M+zMcjAh4qvccfWyRlNZWFtAONwIDAQABo1AwTjAdBgNV
+HQ4EFgQUSBE1/wLJOO3R2TFs8katsJy9B+0wHwYDVR0jBBgwFoAUSBE1/wLJOO3R
+2TFs8katsJy9B+0wDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEATZbL
+PdPIH8ahQpGdtTb0shcxOYcuLcrn67kxEzeOkXcOsmHhw8RdWkQiglMPBwdyi0Xj
+8yY9ri1Jv1jC/swAAmtsB6qd+oxJaiVn2G+okVX2xXaLCQROwfIcNEnwVxUXyNwG
+hMZEiNT1kymy8MI5FwQqZ4hvbbUqcMSrB2O1z5C8zwDL2eXm8LjrmRkRpb+pP9fX
+kwYPbQO4v0v4PKge2ezhWc4u0WFN3Zg68XS2YB5anKQzK1heFiB79mbHyRKF+t9c
+F4Un6peNMm7WBxup68KTBCQb6lK6jhtTUvVirMCjwaXUQOHOrRT9QzoBrfgJm0OJ
+gCAxbCdK3lcDQKxC8Q==
+-----END CERTIFICATE-----`
